@@ -88,6 +88,24 @@ app.post("/login", async (req, res) => {
         res.json({ message: "✅ OTP sent successfully!", otp });
     });
 });
+// async function login() {
+//     const email = document.getElementById('email').value;
+
+//     const response = await fetch("http://localhost:5000/login", {
+//         method: "POST",
+//         headers: { "Content-Type": "application/json" },
+//         body: JSON.stringify({ email })
+//     });
+
+//     const data = await response.json();
+
+//     if (response.ok) {
+//         alert(data.message);
+//         document.getElementById("otp-section").style.display = "block";
+//     } else {
+//         alert("❌ " + data.message);
+//     }
+// }
 
 // Verify OTP
 app.post("/verify-otp", (req, res) => {
