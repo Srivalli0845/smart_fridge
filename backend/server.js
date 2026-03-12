@@ -28,8 +28,10 @@ const itemSchema = new mongoose.Schema({
     name: String,
     quantity: Number,
     expiry: Date,
-    userEmail: String
+    userEmail: String,
+    createdAt: { type: Date, default: Date.now }
 });
+
 const Item = mongoose.model("Item", itemSchema);
 
 // Nodemailer Setup
@@ -88,24 +90,7 @@ app.post("/login", async (req, res) => {
         res.json({ message: "✅ OTP sent successfully!", otp });
     });
 });
-// async function login() {
-//     const email = document.getElementById('email').value;
 
-//     const response = await fetch("http://localhost:5000/login", {
-//         method: "POST",
-//         headers: { "Content-Type": "application/json" },
-//         body: JSON.stringify({ email })
-//     });
-
-//     const data = await response.json();
-
-//     if (response.ok) {
-//         alert(data.message);
-//         document.getElementById("otp-section").style.display = "block";
-//     } else {
-//         alert("❌ " + data.message);
-//     }
-// }
 
 // Verify OTP
 app.post("/verify-otp", (req, res) => {
@@ -173,32 +158,100 @@ app.delete("/delete-item/:id", async (req, res) => {
     }
 });
 
+const recipeSuggestions = {
+    milk: {
+        recipe: "Pancakes",
+        ingredients: ["Milk", "Flour", "Eggs", "Sugar"]
+    },
+    eggs: {
+        recipe: "Omelette",
+        ingredients: ["Eggs", "Onion", "Salt", "Pepper"]
+    },
+    bread: {
+        recipe: "Sandwich",
+        ingredients: ["Bread", "Cheese", "Tomato"]
+    },
+    tomato: {
+        recipe: "Tomato Soup",
+        ingredients: ["Tomato", "Garlic", "Salt"]
+    },
+    cheese: {
+        recipe: "Cheese Pasta",
+        ingredients: ["Pasta", "Cheese", "Milk"]
+    }
+};
 // Check Expiry and Send Alerts
 async function checkExpiry() {
+
     const items = await Item.find();
+
     const today = new Date();
+    today.setHours(0,0,0,0);
 
     items.forEach(async (item) => {
-        const expiryDate = new Date(item.expiry);
-        const diff = Math.ceil((expiryDate - today) / (1000 * 60 * 60 * 24));
 
-        if (diff <= 2) { // If item expires in 2 days or less
+        const expiryDate = new Date(item.expiry);
+        expiryDate.setHours(0,0,0,0);
+
+        const diff = Math.floor(
+            (expiryDate - today) / (1000 * 60 * 60 * 24)
+        );
+
+        if (diff < 0) return;
+
+        let message = "";
+
+        if (diff === 3) {
+            message = `⚠ ${item.name} will expire in 3 days. Please plan to use it soon.`;
+        }
+        else if (diff === 1) {
+            message = `⚠ ${item.name} will expire tomorrow. Don't forget to use it!`;
+        }
+        else if (diff === 0) {
+            message = `🚨 ${item.name} expires today. Please consume it immediately.`;
+        }
+
+        if (message !== "") {
+
+            const recipe = recipeSuggestions[item.name.toLowerCase()];
+
+            let recipeText = "";
+
+            if (recipe) {
+                recipeText = `
+
+🍳 Suggested Recipe: ${recipe.recipe}
+
+Ingredients:
+${recipe.ingredients.join(", ")}
+
+Use your expiring item to prepare this dish!
+`;
+            }
+
             const mailOptions = {
                 from: process.env.EMAIL,
                 to: item.userEmail,
-                subject: `⚠ Expiry Alert: ${item.name}`,
-                text: `Your ${item.name} is about to expire on ${item.expiry}. Please use it soon!`,
+                subject: `Smart Fridge Reminder: ${item.name}`,
+                text: message + recipeText
             };
 
             transporter.sendMail(mailOptions, (error) => {
-                if (error) console.error("❌ Email not sent for expiry alert!", error);
-                else console.log(`✅ Expiry alert sent for ${item.name}`);
+                if (error) {
+                    console.error("❌ Email not sent!", error);
+                } else {
+                    console.log(`✅ Reminder sent for ${item.name}`);
+                }
             });
+
         }
+
     });
+
 }
 
 // Run expiry check every 24 hours
+checkExpiry();
 setInterval(checkExpiry, 24 * 60 * 60 * 1000);
 
 const PORT = process.env.PORT || 5000;
