@@ -1,5 +1,5 @@
-const API_URL = "http://localhost:5000";
-
+// const API_URL = "http://localhost:5000";
+const API_URL = "https://smart-fridge-vdyg.onrender.com";
 // ✅ Login Function
 function login() {
     const email = document.getElementById("email").value;
@@ -60,6 +60,7 @@ if (window.location.pathname.includes("home.html")) {
             return;
         }
 
+        // fetch(`${API_URL}/get-items?email=${encodeURIComponent(userEmail)}`)
         fetch(`${API_URL}/get-items?email=${encodeURIComponent(userEmail)}`)
         .then(res => res.json())
         .then(items => {
